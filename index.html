@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa Cultural - Sua Trilha Cultural</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#8B5CF6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Mapa Cultural">
+    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiTWFwYSBDdWx0dXJhbCIsInNob3J0X25hbWUiOiJNYXBhQ3VsdHVyYWwiLCJzdGFydF91cmwiOiIvIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJ0aGVtZV9jb2xvciI6IiM4QjVDRjYiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiI0Y5RkFGQiIsImljb25zIjpbeyJzcmMiOiJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUIzYVdSMGFEMGlNVEk0SWlCb1pXbG5hSFE5SWpFeU9DSWdkbWxsZDBKdmVEMGlNQ0F3SURBZ01USTRJaUJtYVd4c1BTSWpPREkxUTBZMklpQjRiV3h1Y3owaWFIUjBjRG92TDNkM2R5NTNNeTV2Y21jdk1qQXdNQzl6ZG1jaUlIQnlaWE5sY25abFFYTndaV04wVW1GMGFXODlJbmhOYVc1WlRXbHVJRzFsWlhRaVBnbzhaR1ZtY3o0S0lDQWdQR04xY21ObGN5QnBaRDBpYTJWdWRHVnlTVzVqYVhKamJHVWlJSE45SW1GMGRHVnVkV0YwYVc5dU9pQXdMakV6TzNOMGNtOXJaVDBqT0RFelJFTWlMejRLUEM5a1pXWnpQZ284WTJseVkyeGxJR040UFNJME1DSXVNQ0FnTVRJNExqQWdNVEk0TGpBZ01qTTJMakFnTVRJNExqQWdNVEk0TGpBaUlHWnBiR3c5SW5WeWJDZ2pTMlZ1ZEdWeVNXNWphWEpqYkdVcElpOCtQQzl6ZG1jKyIsInNpemVzIjoiMTI4eDEyOCIsInR5cGUiOiJpbWFnZS9zdmcreG1sIn1dfQ==">
+    
+    <!-- External Libraries -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            width: 350px;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-100%);
+        }
+
+        .sidebar-header {
+            background: linear-gradient(135deg, #8B5CF6, #7C3AED);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+
+        .sidebar-header p {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        .filters {
+            padding: 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .filter-group {
+            margin-bottom: 15px;
+        }
+
+        .filter-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #374151;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .filter-group select:focus,
+        .filter-group input:focus {
+            outline: none;
+            border-color: #8B5CF6;
+        }
+
+        .places-list {
+            flex: 1;
+            padding: 20px;
+        }
+
+        .place-item {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+
+        .place-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .place-item.favorite {
+            border-left: 4px solid #F59E0B;
+        }
+
+        .place-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .place-title {
+            font-weight: 600;
+            color: #1f2937;
+            flex: 1;
+        }
+
+        .place-type {
+            background: #8B5CF6;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            margin-left: 8px;
+        }
+
+        .place-rating {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+
+        .stars {
+            color: #FCD34D;
+            margin-right: 5px;
+        }
+
+        .place-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary {
+            background: #8B5CF6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #7C3AED;
+        }
+
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .btn-secondary:hover {
+            background: #d1d5db;
+        }
+
+        .btn-favorite {
+            background: #F59E0B;
+            color: white;
+        }
+
+        .btn-favorite:hover {
+            background: #D97706;
+        }
+
+        .map-container {
+            flex: 1;
+            position: relative;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        .toggle-sidebar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1001;
+            background: white;
+            border: none;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: #374151;
+            transition: transform 0.2s;
+        }
+
+        .toggle-sidebar:hover {
+            transform: scale(1.1);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #8B5CF6, #7C3AED);
+            color: white;
+            padding: 20px;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .close {
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .close:hover {
+            opacity: 0.7;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #374151;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #8B5CF6;
+        }
+
+        .form-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .rating-input {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+        }
+
+        .star-input {
+            font-size: 1.5rem;
+            color: #d1d5db;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .star-input.active,
+        .star-input:hover {
+            color: #FCD34D;
+        }
+
+        .trail-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 8px;
+        }
+
+        .trail-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .trail-item:last-child {
+            border-bottom: none;
+        }
+
+        .fab {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #8B5CF6, #7C3AED);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+            cursor: pointer;
+            font-size: 1.5rem;
+            z-index: 1500;
+            transition: transform 0.2s;
+        }
+
+        .fab:hover {
+            transform: scale(1.1);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: absolute;
+                height: 100%;
+                z-index: 1001;
+            }
+
+            .sidebar.collapsed {
+                transform: translateX(-100%);
+            }
+
+            .toggle-sidebar {
+                left: 10px;
+                top: 10px;
+            }
+
+            .modal-content {
+                width: 95%;
+                margin: 10% auto;
+            }
+
+            .fab {
+                bottom: 15px;
+                right: 15px;
+                width: 55px;
+                height: 55px;
+            }
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: #6b7280;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e5e7eb;
+            border-top: 2px solid #8B5CF6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h1><i class="fas fa-map-marked-alt"></i> Mapa Cultural</h1>
+                <p>Descubra e crie sua trilha cultural</p>
+            </div>
+
+            <!-- Filtros -->
+            <div class="filters">
+                <div class="filter-group">
+                    <label for="typeFilter">Tipo de Local</label>
+                    <select id="typeFilter">
+                        <option value="">Todos os tipos</option>
+                        <option value="teatro">Teatro</option>
+                        <option value="cinema">Cinema</option>
+                        <option value="centro-cultural">Centro Cultural</option>
+                        <option value="livraria">Livraria</option>
+                        <option value="museu">Museu</option>
+                        <option value="evento">Evento</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="neighborhoodFilter">Bairro</label>
+                    <select id="neighborhoodFilter">
+                        <option value="">Todos os bairros</option>
+                        <option value="centro">Centro</option>
+                        <option value="vila-madalena">Vila Madalena</option>
+                        <option value="vila-olimpia">Vila Olímpia</option>
+                        <option value="pinheiros">Pinheiros</option>
+                        <option value="jardins">Jardins</option>
+                        <option value="liberdade">Liberdade</option>
+                        <option value="bela-vista">Bela Vista</option>
+                        <option value="santa-cecilia">Santa Cecília</option>
+                        <option value="higienopolis">Higienópolis</option>
+                        <option value="brooklin">Brooklin</option>
+                        <option value="moema">Moema</option>
+                        <option value="itaim-bibi">Itaim Bibi</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="searchInput">Buscar</label>
+                    <input type="text" id="searchInput" placeholder="Nome do local...">
+                </div>
+            </div>
+
+            <!-- Lista de Locais -->
+            <div class="places-list" id="placesList">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Carregando locais culturais...
+                </div>
+            </div>
+        </div>
+
+        <!-- Mapa -->
+        <div class="map-container">
+            <button class="toggle-sidebar" id="toggleSidebar">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <!-- FAB para adicionar novo local -->
+    <button class="fab" id="addPlaceFab" title="Adicionar novo local">
+        <i class="fas fa-plus"></i>
+    </button>
+
+    <!-- Modal para adicionar/editar local -->
+    <div id="placeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Adicionar Local Cultural</h2>
+                <span class="close" id="closeModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="placeForm">
+                    <div class="form-group">
+                        <label for="placeName">Nome do Local</label>
+                        <input type="text" id="placeName" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="placeType">Tipo</label>
+                        <select id="placeType" required>
+                            <option value="">Selecione o tipo</option>
+                            <option value="teatro">Teatro</option>
+                            <option value="cinema">Cinema</option>
+                            <option value="centro-cultural">Centro Cultural</option>
+                            <option value="livraria">Livraria</option>
+                            <option value="museu">Museu</option>
+                            <option value="evento">Evento</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="placeNeighborhood">Bairro</label>
+                        <select id="placeNeighborhood" required>
+                            <option value="">Selecione o bairro</option>
+                            <option value="centro">Centro</option>
+                            <option value="vila-madalena">Vila Madalena</option>
+                            <option value="vila-olimpia">Vila Olímpia</option>
+                            <option value="pinheiros">Pinheiros</option>
+                            <option value="jardins">Jardins</option>
+                            <option value="liberdade">Liberdade</option>
+                            <option value="bela-vista">Bela Vista</option>
+                            <option value="santa-cecilia">Santa Cecília</option>
+                            <option value="higienopolis">Higienópolis</option>
+                            <option value="brooklin">Brooklin</option>
+                            <option value="moema">Moema</option>
+                            <option value="itaim-bibi">Itaim Bibi</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="placeAddress">Endereço</label>
+                        <input type="text" id="placeAddress" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="placeDescription">Descrição</label>
+                        <textarea id="placeDescription" placeholder="Descreva o local..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Avaliação</label>
+                        <div class="rating-input" id="ratingInput">
+                            <span class="star-input" data-rating="1">★</span>
+                            <span class="star-input" data-rating="2">★</span>
+                            <span class="star-input" data-rating="3">★</span>
+                            <span class="star-input" data-rating="4">★</span>
+                            <span class="star-input" data-rating="5">★</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="placeComments">Comentários</label>
+                        <textarea id="placeComments" placeholder="Seus comentários sobre o local..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="visitDate">Data da Visita</label>
+                        <input type="date" id="visitDate">
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar</button>
+                        <button type="button" class="btn btn-secondary" id="cancelModal">Cancelar</button>
+                    </div>
+                </form>
+
+                <div class="trail-section" id="trailSection">
+                    <h3>Minha Trilha Cultural</h3>
+                    <div id="trailList"></div>
+                    <button type="button" class="btn btn-secondary" id="clearTrail" style="margin-top: 10px;">Limpar Trilha</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Classe principal da aplicação
+        class CulturalMapApp {
+            constructor() {
+                this.map = null;
+                this.markers = [];
+                this.places = [];
+                this.favorites = [];
+                this.trail = [];
+                this.currentRating = 0;
+                this.selectedPlace = null;
+                this.mapClickLatLng = null;
+
+                this.init();
+            }
+
+            init() {
+                this.initMap();
+                this.initEventListeners();
+                this.loadData();
+                this.populateWithSampleData();
+            }
+
+            initMap() {
+                // Inicializar mapa centrado em São Paulo
+                this.map = L.map('map').setView([-23.5505, -46.6333], 12);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(this.map);
+
+                // Adicionar evento de clique no mapa
+                this.map.on('click', (e) => {
+                    this.mapClickLatLng = e.latlng;
+                    this.showAddPlaceModal();
+                });
+            }
+
+            initEventListeners() {
+                // Toggle sidebar
+                document.getElementById('toggleSidebar').addEventListener('click', () => {
+                    document.getElementById('sidebar').classList.toggle('collapsed');
+                });
+
+                // Filtros
+                document.getElementById('typeFilter').addEventListener('change', () => this.filterPlaces());
+                document.getElementById('neighborhoodFilter').addEventListener('change', () => this.filterPlaces());
+                document.getElementById('searchInput').addEventListener('input', () => this.filterPlaces());
+
+                // Modal
+                document.getElementById('addPlaceFab').addEventListener('click', () => this.showAddPlaceModal());
+                document.getElementById('closeModal').addEventListener('click', () => this.hideModal());
+                document.getElementById('cancelModal').addEventListener('click', () => this.hideModal());
+                document.getElementById('placeForm').addEventListener('submit', (e) => this.handleFormSubmit(e));
+
+                // Rating
+                document.querySelectorAll('.star-input').forEach(star => {
+                    star.addEventListener('click', (e) => this.setRating(parseInt(e.target.dataset.rating)));
+                    star.addEventListener('mouseover', (e) => this.highlightStars(parseInt(e.target.dataset.rating)));
+                });
+
+                document.getElementById('ratingInput').addEventListener('mouseleave', () => this.highlightStars(this.currentRating));
+
+                // Trail
+                document.getElementById('clearTrail').addEventListener('click', () => this.clearTrail());
+
+                // Fechar modal clicando fora
+                window.addEventListener('click', (e) => {
+                    if (e.target.id === 'placeModal') {
+                        this.hideModal();
+                    }
+                });
+            }
+
+            populateWithSampleData() {
+                const samplePlaces = [
+                    {
+                        id: 1,
+                        name: 'Teatro Municipal de São Paulo',
+                        type: 'teatro',
+                        neighborhood: 'centro',
+                        address: 'Praça Ramos de Azevedo, s/n - República, São Paulo',
+                        description: 'Magnífico teatro inaugurado em 1911, inspirado na Ópera de Paris.',
+                        rating: 5,
+                        comments: 'Arquitetura deslumbrante e acústica perfeita. Programação de alta qualidade.',
+                        visitDate: '2024-01-15',
+                        lat: -23.5445,
+                        lng: -46.6406,
+                        isFavorite: false
+                    },
+                    {
+                        id: 2,
+                        name: 'Museu de Arte de São Paulo (MASP)',
+                        type: 'museu',
+                        neighborhood: 'bela-vista',
+                        address: 'Av. Paulista, 1578 - Bela Vista, São Paulo',
+                        description: 'Principal museu de arte ocidental da América Latina.',
+                        rating: 5,
+                        comments: 'Coleção impressionante e arquitetura icônica da Lina Bo Bardi.',
+                        visitDate: '2024-02-10',
+                        lat: -23.5616,
+                        lng: -46.6556,
+                        isFavorite: true
+                    },
+                    {
+                        id: 3,
+                        name: 'Livraria da Vila',
+                        type: 'livraria',
+                        neighborhood: 'jardins',
+                        address: 'Rua Fradique Coutinho, 915 - Vila Madalena, São Paulo',
+                        description: 'Livraria independente com curadoria especial e eventos literários.',
+                        rating: 4,
+                        comments: 'Ambiente acolhedor e seleção de livros diferenciada.',
+                        visitDate: '2024-03-05',
+                        lat: -23.5505,
+                        lng: -46.6911,
+                        isFavorite: false
+                    },
+                    {
+                        id: 4,
+                        name: 'Centro Cultural Banco do Brasil (CCBB-SP)',
+                        type: 'centro-cultural',
+                        neighborhood: 'centro',
+                        address: 'Rua Álvares Penteado, 112 - Centro, São Paulo',
+                        description: 'Importante centro cultural com exposições de arte contemporânea.',
+                        rating: 5,
+                        comments: 'Sempre com exposições incríveis e entrada gratuita.',
+                        visitDate: '2024-01-20',
+                        lat: -23.5478,
+                        lng: -46.6358,
+                        isFavorite: true
+                    },
+                    {
+                        id: 5,
+                        name: 'Cine Belas Artes',
+                        type: 'cinema',
+                        neighborhood: 'bela-vista',
+                        address: 'Rua da Consolação, 2423 - Consolação, São Paulo',
+                        description: 'Cinema tradicional que exibe filmes de arte e festivais.',
+                        rating: 4,
+                        comments: 'Referência em cinema de autor e sessões especiais.',
+                        visitDate: '2024-02-25',
+                        lat: -23.5547,
+                        lng: -46.6598,
+                        isFavorite: false
+                    },
+                    {
+                        id: 6,
+                        name: 'Pinacoteca do Estado',
+                        type: 'museu',
+                        neighborhood: 'centro',
+                        address: 'Praça da Luz, 2 - Luz, São Paulo',
+                        description: 'Museu de arte brasileira mais antigo da cidade.',
+                        rating: 5,
+                        comments: 'Acervo fantástico de arte brasileira dos séculos XIX e XX.',
+                        visitDate: '2024-03-15',
+                        lat: -23.5346,
+                        lng: -46.6332,
+                        isFavorite: true
+                    },
+                    {
+                        id: 7,
+                        name: 'Instituto Moreira Salles',
+                        type: 'centro-cultural',
+                        neighborhood: 'pinheiros',
+                        address: 'Av. Paulista, 2424 - Bela Vista, São Paulo',
+                        description: 'Centro cultural com foco em fotografia, literatura e música.',
+                        rating: 4,
+                        comments: 'Exposições de fotografia de altíssima qualidade.',
+                        visitDate: '2024-04-01',
+                        lat: -23.5629,
+                        lng: -46.6544,
+                        isFavorite: false
+                    },
+                    {
+                        id: 8,
+                        name: 'Theatro São Pedro',
+                        type: 'teatro',
+                        neighborhood: 'bela-vista',
+                        address: 'Rua Barra Funda, 171 - Barra Funda, São Paulo',
+                        description: 'Teatro histórico com programação diversificada.',
+                        rating: 4,
+                        comments: 'Teatro charmoso com peças de qualidade.',
+                        visitDate: '2024-02-28',
+                        lat: -23.5258,
+                        lng: -46.6658,
+                        isFavorite: false
+                    },
+                    {
+                        id: 9,
+                        name: 'Museu da Língua Portuguesa',
+                        type: 'museu',
+                        neighborhood: 'centro',
+                        address: 'Praça da Luz, s/n - Luz, São Paulo',
+                        description: 'Museu interativo dedicado à língua portuguesa.',
+                        rating: 4,
+                        comments: 'Exposições interativas muito interessantes sobre nossa língua.',
+                        visitDate: '2024-03-10',
+                        lat: -23.5347,
+                        lng: -46.6334,
+                        isFavorite: true
+                    },
+                    {
+                        id: 10,
+                        name: 'Casa das Rosas',
+                        type: 'centro-cultural',
+                        neighborhood: 'bela-vista',
+                        address: 'Av. Paulista, 37 - Bela Vista, São Paulo',
+                        description: 'Casa histórica dedicada à poesia e literatura.',  
+                        rating: 4,
+                        comments: 'Local encantador para eventos literários.',
+                        visitDate: '2024-01-25',
+                        lat: -23.5576,
+                        lng: -46.6512,
+                        isFavorite: false
+                    },
+                    {
+                        id: 11,
+                        name: 'Centro Cultural São Paulo',
+                        type: 'centro-cultural',
+                        neighborhood: 'bela-vista',
+                        address: 'Rua Vergueiro, 1000 - Liberdade, São Paulo',
+                        description: 'Grande complexo cultural com biblioteca, teatros e exposições.',
+                        rating: 4,
+                        comments: 'Espaço amplo com muitas opções culturais gratuitas.',
+                        visitDate: '2024-04-05',
+                        lat: -23.5705,
+                        lng: -46.6395,
+                        isFavorite: true
+                    },
+                    {
+                        id: 12,
+                        name: 'Galeria Vermelho',
+                        type: 'museu',
+                        neighborhood: 'higienopolis',
+                        address: 'Rua Minas Gerais, 350 - Higienópolis, São Paulo',
+                        description: 'Galeria de arte contemporânea com artistas nacionais e internacionais.',
+                        rating: 4,
+                        comments: 'Sempre com exposições inovadoras de arte contemporânea.',
+                        visitDate: '2024-03-20',
+                        lat: -23.5449,
+                        lng: -46.6531,
+                        isFavorite: false
+                    }
+                ];
+
+                this.places = samplePlaces;
+                this.favorites = samplePlaces.filter(place => place.isFavorite).map(place => place.id);
+                this.saveData();
+                this.renderPlaces();
+                this.renderMap();
+            }
+
+            loadData() {
+                const savedPlaces = localStorage.getItem('culturalMapPlaces');
+                const savedFavorites = localStorage.getItem('culturalMapFavorites');
+                const savedTrail = localStorage.getItem('culturalMapTrail');
+
+                if (savedPlaces) {
+                    this.places = JSON.parse(savedPlaces);
+                }
+                if (savedFavorites) {
+                    this.favorites = JSON.parse(savedFavorites);
+                }
+                if (savedTrail) {
+                    this.trail = JSON.parse(savedTrail);
+                }
+            }
+
+            saveData() {
+                localStorage.setItem('culturalMapPlaces', JSON.stringify(this.places));
+                localStorage.setItem('culturalMapFavorites', JSON.stringify(this.favorites));
+                localStorage.setItem('culturalMapTrail', JSON.stringify(this.trail));
+            }
+
+            getTypeIcon(type) {
+                const icons = {
+                    'teatro': 'fa-theater-masks',
+                    'cinema': 'fa-film',
+                    'centro-cultural': 'fa-building-columns',
+                    'livraria': 'fa-book',
+                    'museu': 'fa-landmark',
+                    'evento': 'fa-calendar-days'
+                };
+                return icons[type] || 'fa-map-marker-alt';
+            }
+
+            getTypeColor(type) {
+                const colors = {
+                    'teatro': '#8B5CF6',
+                    'cinema': '#EF4444',
+                    'centro-cultural': '#10B981',
+                    'livraria': '#F59E0B',
+                    'museu': '#3B82F6',
+                    'evento': '#EC4899'
+                };
+                return colors[type] || '#6B7280';
+            }
+
+            renderPlaces() {
+                const placesList = document.getElementById('placesList');
+                const filteredPlaces = this.getFilteredPlaces();
+
+                if (filteredPlaces.length === 0) {
+                    placesList.innerHTML = '<div class="loading">Nenhum local encontrado</div>';
+                    return;
+                }
+
+                placesList.innerHTML = filteredPlaces.map(place => `
+                    <div class="place-item ${this.favorites.includes(place.id) ? 'favorite' : ''}" data-id="${place.id}">
+                        <div class="place-header">
+                            <div class="place-title">
+                                <i class="fas ${this.getTypeIcon(place.type)}"></i>
+                                ${place.name}
+                            </div>
+                            <div class="place-type" style="background-color: ${this.getTypeColor(place.type)}">
+                                ${this.getTypeLabel(place.type)}
+                            </div>
+                        </div>
+                        <div class="place-rating">
+                            <div class="stars">${'★'.repeat(place.rating)}${'☆'.repeat(5 - place.rating)}</div>
+                            <span>${place.rating}/5</span>
+                        </div>
+                        <div style="color: #6b7280; font-size: 0.85rem; margin: 5px 0;">
+                            <i class="fas fa-map-marker-alt"></i> ${place.neighborhood}
+                        </div>
+                        <div style="color: #374151; font-size: 0.9rem; margin: 8px 0;">
+                            ${place.description}
+                        </div>
+                        <div class="place-actions">
+                            <button class="btn ${this.favorites.includes(place.id) ? 'btn-favorite' : 'btn-secondary'}" 
+                                    onclick="app.toggleFavorite(${place.id})">
+                                <i class="fas fa-heart"></i> 
+                                ${this.favorites.includes(place.id) ? 'Favorito' : 'Favoritar'}
+                            </button>
+                            <button class="btn btn-primary" onclick="app.addToTrail(${place.id})">
+                                <i class="fas fa-route"></i> Trilha
+                            </button>
+                            <button class="btn btn-secondary" onclick="app.editPlace(${place.id})">
+                                <i class="fas fa-edit"></i> Editar
+                            </button>
+                            <button class="btn btn-secondary" onclick="app.focusOnMap(${place.id})">
+                                <i class="fas fa-map"></i> Ver no Mapa
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            getTypeLabel(type) {
+                const labels = {
+                    'teatro': 'Teatro',
+                    'cinema': 'Cinema',
+                    'centro-cultural': 'Centro Cultural',
+                    'livraria': 'Livraria',
+                    'museu': 'Museu',
+                    'evento': 'Evento'
+                };
+                return labels[type] || type;
+            }
+
+            renderMap() {
+                // Limpar markers existentes
+                this.markers.forEach(marker => this.map.removeLayer(marker));
+                this.markers = [];
+
+                const filteredPlaces = this.getFilteredPlaces();
+
+                filteredPlaces.forEach(place => {
+                    const marker = L.marker([place.lat, place.lng])
+                        .addTo(this.map)
+                        .bindPopup(`
+                            <div style="min-width: 200px;">
+                                <h3 style="margin: 0 0 10px 0; color: ${this.getTypeColor(place.type)};">
+                                    <i class="fas ${this.getTypeIcon(place.type)}"></i>
+                                    ${place.name}
+                                </h3>
+                                <div style="margin: 5px 0;">
+                                    <strong>Tipo:</strong> ${this.getTypeLabel(place.type)}
+                                </div>
+                                <div style="margin: 5px 0;">
+                                    <strong>Bairro:</strong> ${place.neighborhood}
+                                </div>
+                                <div style="margin: 5px 0;">
+                                    <strong>Avaliação:</strong> ${'★'.repeat(place.rating)}${'☆'.repeat(5 - place.rating)} (${place.rating}/5)
+                                </div>
+                                <div style="margin: 10px 0;">
+                                    ${place.description}
+                                </div>
+                                ${place.comments ? `<div style="margin: 10px 0; font-style: italic;">"${place.comments}"</div>` : ''}
+                                <div style="margin-top: 10px;">
+                                    <button onclick="app.toggleFavorite(${place.id})" 
+                                            style="background: ${this.favorites.includes(place.id) ? '#F59E0B' : '#e5e7eb'}; 
+                                                   color: ${this.favorites.includes(place.id) ? 'white' : '#374151'}; 
+                                                   border: none; padding: 5px 10px; border-radius: 4px; margin-right: 5px; cursor: pointer;">
+                                        <i class="fas fa-heart"></i> ${this.favorites.includes(place.id) ? 'Favorito' : 'Favoritar'}
+                                    </button>
+                                    <button onclick="app.addToTrail(${place.id})" 
+                                            style="background: #8B5CF6; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+                                        <i class="fas fa-route"></i> Adicionar à Trilha
+                                    </button>
+                                </div>
+                            </div>
+                        `);
+
+                    this.markers.push(marker);
+                });
+
+                // Desenhar trilha se existir
+                this.drawTrail();
+            }
+
+            drawTrail() {
+                if (this.trailPolyline) {
+                    this.map.removeLayer(this.trailPolyline);
+                }
+
+                if (this.trail.length > 1) {
+                    const trailPoints = this.trail.map(placeId => {
+                        const place = this.places.find(p => p.id === placeId);
+                        return place ? [place.lat, place.lng] : null;
+                    }).filter(point => point !== null);
+
+                    if (trailPoints.length > 1) {
+                        this.trailPolyline = L.polyline(trailPoints, {
+                            color: '#8B5CF6',
+                            weight: 4,
+                            opacity: 0.8,
+                            dashArray: '10, 5'
+                        }).addTo(this.map);
+                    }
+                }
+            }
+
+            getFilteredPlaces() {
+                const typeFilter = document.getElementById('typeFilter').value;
+                const neighborhoodFilter = document.getElementById('neighborhoodFilter').value;
+                const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+
+                return this.places.filter(place => {
+                    const matchesType = !typeFilter || place.type === typeFilter;
+                    const matchesNeighborhood = !neighborhoodFilter || place.neighborhood === neighborhoodFilter;
+                    const matchesSearch = !searchQuery || 
+                        place.name.toLowerCase().includes(searchQuery) ||
+                        place.description.toLowerCase().includes(searchQuery) ||
+                        place.address.toLowerCase().includes(searchQuery);
+
+                    return matchesType && matchesNeighborhood && matchesSearch;
+                });
+            }
+
+            filterPlaces() {
+                this.renderPlaces();
+                this.renderMap();
+            }
+
+            showAddPlaceModal() {
+                document.getElementById('modalTitle').textContent = 'Adicionar Local Cultural';
+                document.getElementById('placeForm').reset();
+                this.currentRating = 0;
+                this.highlightStars(0);
+                this.selectedPlace = null;
+                document.getElementById('placeModal').style.display = 'block';
+            }
+
+            showEditPlaceModal(place) {
+                document.getElementById('modalTitle').textContent = 'Editar Local Cultural';
+                document.getElementById('placeName').value = place.name;
+                document.getElementById('placeType').value = place.type;
+                document.getElementById('placeNeighborhood').value = place.neighborhood;
+                document.getElementById('placeAddress').value = place.address;
+                document.getElementById('placeDescription').value = place.description;
+                document.getElementById('placeComments').value = place.comments || '';
+                document.getElementById('visitDate').value = place.visitDate || '';
+                this.currentRating = place.rating;
+                this.highlightStars(place.rating);
+                this.selectedPlace = place;
+                document.getElementById('placeModal').style.display = 'block';
+            }
+
+            hideModal() {
+                document.getElementById('placeModal').style.display = 'none';
+                this.updateTrailDisplay();
+            }
+
+            handleFormSubmit(e) {
+                e.preventDefault();
+
+                const formData = {
+                    name: document.getElementById('placeName').value,
+                    type: document.getElementById('placeType').value,
+                    neighborhood: document.getElementById('placeNeighborhood').value,
+                    address: document.getElementById('placeAddress').value,
+                    description: document.getElementById('placeDescription').value,
+                    rating: this.currentRating,
+                    comments: document.getElementById('placeComments').value,
+                    visitDate: document.getElementById('visitDate').value
+                };
+
+                if (this.selectedPlace) {
+                    // Editar local existente
+                    const index = this.places.findIndex(p => p.id === this.selectedPlace.id);
+                    this.places[index] = {
+                        ...this.selectedPlace,
+                        ...formData
+                    };
+                } else {
+                    // Adicionar novo local
+                    let lat, lng;
+
+                    if (this.mapClickLatLng) {
+                        lat = this.mapClickLatLng.lat;
+                        lng = this.mapClickLatLng.lng;
+                        this.mapClickLatLng = null;
+                    } else {
+                        // Coordenadas padrão (centro de São Paulo)
+                        lat = -23.5505 + (Math.random() - 0.5) * 0.1;
+                        lng = -46.6333 + (Math.random() - 0.5) * 0.1;
+                    }
+
+                    const newPlace = {
+                        id: Date.now(),
+                        lat,
+                        lng,
+                        isFavorite: false,
+                        ...formData
+                    };
+
+                    this.places.push(newPlace);
+                }
+
+                this.saveData();
+                this.renderPlaces();
+                this.renderMap();
+                this.hideModal();
+            }
+
+            setRating(rating) {
+                this.currentRating = rating;
+                this.highlightStars(rating);
+            }
+
+            highlightStars(count) {
+                document.querySelectorAll('.star-input').forEach((star, index) => {
+                    star.classList.toggle('active', index < count);
+                });
+            }
+
+            toggleFavorite(placeId) {
+                const index = this.favorites.indexOf(placeId);
+                if (index > -1) {
+                    this.favorites.splice(index, 1);
+                } else {
+                    this.favorites.push(placeId);
+                }
+
+                // Atualizar o status de favorito no objeto place
+                const place = this.places.find(p => p.id === placeId);
+                if (place) {
+                    place.isFavorite = this.favorites.includes(placeId);
+                }
+
+                this.saveData();
+                this.renderPlaces();
+                this.renderMap();
+            }
+
+            addToTrail(placeId) {
+                if (!this.trail.includes(placeId)) {
+                    this.trail.push(placeId);
+                    this.saveData();
+                    this.drawTrail();
+                    this.updateTrailDisplay();
+                    
+                    // Feedback visual
+                    this.showNotification('Local adicionado à trilha!');
+                }
+            }
+
+            removeFromTrail(placeId) {
+                const index = this.trail.indexOf(placeId);
+                if (index > -1) {
+                    this.trail.splice(index, 1);
+                    this.saveData();
+                    this.drawTrail();
+                    this.updateTrailDisplay();
+                }
+            }
+
+            clearTrail() {
+                if (confirm('Deseja limpar toda a trilha cultural?')) {
+                    this.trail = [];
+                    this.saveData();
+                    this.drawTrail();
+                    this.updateTrailDisplay();
+                }
+            }
+
+            updateTrailDisplay() {
+                const trailList = document.getElementById('trailList');
+                
+                if (this.trail.length === 0) {
+                    trailList.innerHTML = '<p style="color: #6b7280; text-align: center; padding: 20px;">Sua trilha cultural está vazia. Adicione locais para criar seu roteiro!</p>';
+                    return;
+                }
+
+                trailList.innerHTML = this.trail.map((placeId, index) => {
+                    const place = this.places.find(p => p.id === placeId);
+                    if (!place) return '';
+
+                    return `
+                        <div class="trail-item">
+                            <div>
+                                <strong>${index + 1}. ${place.name}</strong><br>
+                                <small style="color: #6b7280;">
+                                    <i class="fas ${this.getTypeIcon(place.type)}"></i>
+                                    ${this.getTypeLabel(place.type)} - ${place.neighborhood}
+                                </small>
+                            </div>
+                            <button class="btn btn-secondary" onclick="app.removeFromTrail(${placeId})" style="padding: 4px 8px;">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            editPlace(placeId) {
+                const place = this.places.find(p => p.id === placeId);
+                if (place) {
+                    this.showEditPlaceModal(place);
+                }
+            }
+
+            focusOnMap(placeId) {
+                const place = this.places.find(p => p.id === placeId);
+                if (place) {
+                    this.map.setView([place.lat, place.lng], 16);
+                    
+                    // Encontrar e abrir o popup do marker
+                    const marker = this.markers.find(m => 
+                        m.getLatLng().lat === place.lat && m.getLatLng().lng === place.lng
+                    );
+                    if (marker) {
+                        marker.openPopup();
+                    }
+
+                    // Fechar sidebar no mobile
+                    if (window.innerWidth <= 768) {
+                        document.getElementById('sidebar').classList.add('collapsed');
+                    }
+                }
+            }
+
+            showNotification(message) {
+                // Criar elemento de notificação
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: #10B981;
+                    color: white;
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+                    z-index: 2001;
+                    font-weight: 500;
+                    animation: slideIn 0.3s ease-out;
+                `;
+                notification.textContent = message;
+
+                // Adicionar CSS para animação
+                if (!document.getElementById('notificationStyles')) {
+                    const style = document.createElement('style');
+                    style.id = 'notificationStyles';
+                    style.textContent = `
+                        @keyframes slideIn {
+                            from { transform: translateX(100%); opacity: 0; }
+                            to { transform: translateX(0); opacity: 1; }
+                        }
+                        @keyframes slideOut {
+                            from { transform: translateX(0); opacity: 1; }
+                            to { transform: translateX(100%); opacity: 0; }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+
+                document.body.appendChild(notification);
+
+                // Remover após 3 segundos
+                setTimeout(() => {
+                    notification.style.animation = 'slideOut 0.3s ease-in';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.parentNode.removeChild(notification);
+                        }
+                    }, 300);
+                }, 3000);
+            }
+        }
+
+        // Inicializar aplicação
+        const app = new CulturalMapApp();
+
+        // Service Worker para PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                const swCode = `
+                    const CACHE_NAME = 'cultural-map-v1.0.0';
+                    const urlsToCache = [
+                        '/',
+                        'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+                        'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+                        'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css'
+                    ];
+
+                    self.addEventListener('install', event => {
+                        event.waitUntil(
+                            caches.open(CACHE_NAME)
+                                .then(cache => cache.addAll(urlsToCache))
+                        );
+                    });
+
+                    self.addEventListener('fetch', event => {
+                        event.respondWith(
+                            caches.match(event.request)
+                                .then(response => {
+                                    if (response) {
+                                        return response;
+                                    }
+                                    return fetch(event.request);
+                                })
+                        );
+                    });
+                `;
+
+                const blob = new Blob([swCode], { type: 'application/javascript' });
+                const swUrl = URL.createObjectURL(blob);
+
+                navigator.serviceWorker.register(swUrl)
+                    .then(registration => {
+                        console.log('SW registrado com sucesso:', registration);
+                    })
+                    .catch(error => {
+                        console.log('Erro ao registrar SW:', error);
+                    });
+            });
+        }
+
+        // Adicionar ao trail display quando modal é aberto
+        document.addEventListener('DOMContentLoaded', () => {
+            app.updateTrailDisplay();
+        });
+    </script>
+</body>
+</html>
